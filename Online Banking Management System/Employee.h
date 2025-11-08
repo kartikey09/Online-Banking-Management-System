@@ -588,7 +588,6 @@ void approveRejectLoan(int connectionFD, int empID)
         return;
     }
 
-    // ---------- Step 7: Ask user (employee) to approve or reject ----------
     memset(writeBuffer, 0, sizeof(writeBuffer));
     strcpy(writeBuffer, "Enter 1 to Approve Loan\nEnter 2 to Reject Loan: ");
     write(connectionFD, writeBuffer, sizeof(writeBuffer));
@@ -598,7 +597,7 @@ void approveRejectLoan(int connectionFD, int empID)
 
     int fp = open(HISTORYPATH, O_RDWR | O_APPEND | O_CREAT, 0644);
 
-    // ---------- Step 8: Process choice ----------
+
     if (choice == 1) {
         if (cs.activeStatus == 0) {
             ld.status = 3; // rejected
@@ -609,7 +608,7 @@ void approveRejectLoan(int connectionFD, int empID)
             ld.status = 2; // approved
             printf("%d approved loan ID %d for account %d\n", empID, ld.loanID, cs.accountNumber);
 
-            // Write transaction history
+
             bzero(transactionBuffer, sizeof(transactionBuffer));
             sprintf(transactionBuffer,
                     "%d credited by loan id %d at %02d:%02d:%02d %d-%d-%d\n",
@@ -632,7 +631,7 @@ void approveRejectLoan(int connectionFD, int empID)
         printf("Invalid choice entered for loan approval menu\n");
     }
 
-    // ---------- Step 9: Update records ----------
+
     if (approveFlag || rejectFlag || deactiveFlag) {
         lseek(file, srcOffset1, SEEK_SET);
         write(file, &ld, sizeof(ld));
@@ -641,18 +640,18 @@ void approveRejectLoan(int connectionFD, int empID)
         write(file2, &cs, sizeof(cs));
     }
 
-    // ---------- Step 10: Unlock both ----------
+
     fl2.l_type = F_UNLCK;
     fcntl(file2, F_SETLK, &fl2);
     fl1.l_type = F_UNLCK;
     fcntl(file, F_SETLK, &fl1);
 
-    // ---------- Step 11: Close files ----------
+
     close(fp);
     close(file);
     close(file2);
 
-    // ---------- Step 12: Inform client ----------
+
     memset(writeBuffer, 0, sizeof(writeBuffer));
     if (approveFlag)
         strcpy(writeBuffer, "Loan Approved\n^");
