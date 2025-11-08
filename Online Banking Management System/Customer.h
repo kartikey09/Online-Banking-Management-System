@@ -535,6 +535,17 @@ void applyLoan(int connectionFD, int accountNumber){
 void transferFunds(int connectionFD, int sourceAccount, int destAccount, float amount) {
     char readBuffer[4096], writeBuffer[4096], transactionBuffer[1024];
 
+    if(sourceAccount == destAccount)
+    {
+        bzero(writeBuffer, sizeof(writeBuffer));
+        bzero(readBuffer, sizeof(readBuffer));
+        printf("Cant transfer funds to your own account\n");
+        strcpy(writeBuffer, "Cant transfer funds to your own account^");
+        write(connectionFD, writeBuffer, sizeof(writeBuffer));
+        read(connectionFD, readBuffer, sizeof(readBuffer));
+        return;        
+    }
+
     struct Customer cs;
     struct trans_histroy th;
     int isTransfer = 0;
@@ -580,6 +591,7 @@ void transferFunds(int connectionFD, int sourceAccount, int destAccount, float a
         read(connectionFD, readBuffer, sizeof(readBuffer));
         return;        
     }
+
 
     struct flock fl1 = {F_WRLCK, SEEK_SET, srcOffset, sizeof(struct Customer), getpid()};
     fcntl(file, F_SETLKW, &fl1);
