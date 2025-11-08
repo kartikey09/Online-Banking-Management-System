@@ -478,7 +478,7 @@ void applyLoan(int connectionFD, int accountNumber){
 
     // reading & writing loan counter
     struct Counter ct;
-    int file = open(COUNTERPATH, O_RDWR, 0644);
+    int file = open(COUNTERPATH, O_RDWR , 0644);
     read(file, &ct, sizeof(ct));
     int lc = ct.count;
     printf("value of lc: %d\n", lc);
@@ -524,7 +524,7 @@ void applyLoan(int connectionFD, int accountNumber){
     {        
         bzero(readBuffer, sizeof(readBuffer));
         bzero(writeBuffer, sizeof(writeBuffer));
-        strcpy(writeBuffer, "Loan applied^");
+        snprintf(writeBuffer, sizeof(writeBuffer), "Loan applied with id: %d^", ld.loanID);
         write(connectionFD, writeBuffer, sizeof(writeBuffer));
         read(connectionFD, readBuffer, sizeof(readBuffer));
     }

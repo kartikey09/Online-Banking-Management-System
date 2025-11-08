@@ -257,104 +257,217 @@ void readFeedBack(int connectionFD)
 }
 
 // ==================== Assign Loan Application Processes to Employees ====================
+// void assignLoanApplication(int connectionFD)
+// {
+//     struct LoanDetails ld;
+//     int file = open(LOANPATH, O_CREAT | O_RDWR, 0644);
+//     if(file == -1)
+//     {
+//         printf("Error in opening file\n");
+//         return ;
+//     }
+
+//     lseek(file, 0, SEEK_SET); 
+//     while(read(file, &ld, sizeof(ld)) == sizeof(ld))
+//     {
+//         if(ld.empID == -1)
+//         {
+//             memset(writeBuffer, '\0', sizeof(writeBuffer));
+//             sprintf(writeBuffer,
+//                 "Loan ID: %d\nAccount Number: %d\nLoan Amount: %d^",
+//                 ld.loanID, ld.accountNumber, ld.loanAmount);
+//             write(connectionFD, writeBuffer, sizeof(writeBuffer));
+//             read(connectionFD, readBuffer, sizeof(readBuffer));
+//         }
+//     }
+
+
+//     lseek(file, 0, SEEK_SET); 
+//     int lID, eID;
+//     memset(writeBuffer, '\0', sizeof(writeBuffer));
+//     strcpy(writeBuffer, "Enter Loan ID: ");
+//     write(connectionFD, writeBuffer, sizeof(writeBuffer));
+    
+//     memset(readBuffer, '\0', sizeof(readBuffer));
+//     read(connectionFD, readBuffer, sizeof(readBuffer));
+//     lID = atoi(readBuffer);
+
+
+//     int srcOffset = -1;
+//     lseek(file, 0, SEEK_SET);
+//     while(read(file, &ld, sizeof(ld)) == sizeof(ld))
+//     {
+//         if(ld.loanID == lID)
+//         {
+//             srcOffset = lseek(file, -sizeof(struct LoanDetails), SEEK_CUR);
+//             break;
+//         }
+//     }
+
+//     if(srcOffset < 0)
+//     {
+//         sprintf(writeBuffer, "Invalid loan ID^");
+//         write(connectionFD, writeBuffer, sizeof(writeBuffer));
+//         read(connectionFD, readBuffer, sizeof(readBuffer));
+//         close(file);
+//         return;
+//     }
+
+
+//     struct flock fl1;
+//     memset(&fl1, 0, sizeof(fl1));
+//     fl1.l_type = F_WRLCK;
+//     fl1.l_whence = SEEK_SET;
+//     fl1.l_start = srcOffset;
+//     fl1.l_len = sizeof(struct LoanDetails);
+//     fl1.l_pid = getpid();
+
+//     if (fcntl(file, F_SETLKW, &fl1) == -1)
+//     {
+//         perror("Error locking record");
+//         close(file);
+//         return;
+//     }
+
+
+//     lseek(file, srcOffset, SEEK_SET);
+//     read(file, &ld, sizeof(ld));
+
+
+//     if(ld.empID != -1)
+//     {
+//         sprintf(writeBuffer, "Employee already assigned for loan ID %d^", lID);
+//         write(connectionFD, writeBuffer, sizeof(writeBuffer));
+//         read(connectionFD, readBuffer, sizeof(readBuffer));
+//     }
+//     else
+//     {
+//         memset(writeBuffer, '\0', sizeof(writeBuffer));
+//         strcpy(writeBuffer, "Enter Employee ID: ");
+//         write(connectionFD, writeBuffer, sizeof(writeBuffer));
+
+//         memset(readBuffer, '\0', sizeof(readBuffer));
+//         read(connectionFD, readBuffer, sizeof(readBuffer));
+//         int eID = atoi(readBuffer);
+
+//         ld.empID = eID;
+//         ld.status = 1; // Pending
+//         lseek(file, srcOffset, SEEK_SET);
+//         write(file, &ld, sizeof(ld));
+
+//         printf("Manager assigned employee %d to loan %d\n", eID, lID);
+//         sprintf(writeBuffer, "Loan ID %d assigned to Employee %d successfully^", lID, eID);
+//         write(connectionFD, writeBuffer, sizeof(writeBuffer));
+//         read(connectionFD, readBuffer, sizeof(readBuffer));
+//     }
+
+//     fl1.l_type = F_UNLCK;
+//     fcntl(file, F_SETLK, &fl1);
+//     close(file);
+// }
+
 void assignLoanApplication(int connectionFD)
 {
     struct LoanDetails ld;
-    int file = open(LOANPATH, O_CREAT | O_RDWR, 0644);
-    if(file == -1)
-    {
-        printf("Error in opening file\n");
-        return ;
+    int file = open(LOANPATH, O_RDWR | O_CREAT, 0644);
+    if (file == -1) {
+        perror("Error opening loan file");
+        return;
     }
 
-    // Printing Unassigned loan application
-    while(read(file, &ld, sizeof(ld)) != 0)
-    {
-        if(ld.empID == -1)
-        {
-            memset(readBuffer, '\0', sizeof(readBuffer));
+    lseek(file, 0, SEEK_SET);
+    int hasUnassigned = 0;
+
+    while (read(file, &ld, sizeof(ld)) == sizeof(ld)) {
+        if (ld.empID == -1) {
+            hasUnassigned = 1;
             memset(writeBuffer, '\0', sizeof(writeBuffer));
-            sprintf(writeBuffer, "Loan ID: %d\nAccount Number: %d\nLoan Amount: %d^", ld.loanID, ld.accountNumber, ld.loanAmount);
+            sprintf(writeBuffer,
+                "Loan ID: %d\nAccount Number: %d\nLoan Amount: %d\nStatus: %d^",
+                ld.loanID, ld.accountNumber, ld.loanAmount, ld.status);
             write(connectionFD, writeBuffer, sizeof(writeBuffer));
             read(connectionFD, readBuffer, sizeof(readBuffer));
         }
     }
-    lseek(file, 0, SEEK_SET);
 
-    // Locking
-    int lID, eID;
-
-    memset(writeBuffer, '\0', sizeof(writeBuffer));
-    strcpy(writeBuffer, "Enter Loan ID: ");
-    write(connectionFD, writeBuffer, sizeof(writeBuffer));
-    
-    memset(readBuffer, '\0', sizeof(readBuffer));
-    read(connectionFD, readBuffer, sizeof(readBuffer));
-    lID = atoi(readBuffer);
-
-    int srcOffset = -1, sourceFound = 0;
-    while (read(file, &ld, sizeof(ld)) != 0)
-    {
-        if(ld.loanID == lID)
-        {
-            srcOffset = lseek(file, -sizeof(struct LoanDetails), SEEK_CUR);
-            sourceFound = 1;
-        }
-        if(sourceFound)
-            break;
-    }
-    if(srcOffset == -1)
-    {
-        memset(writeBuffer, '\0', sizeof(writeBuffer));
-        memset(readBuffer, '\0', sizeof(readBuffer));
-        sprintf(writeBuffer, "Invalid loan ID^");
+    if (!hasUnassigned) {
+        sprintf(writeBuffer, "No unassigned loan applications found.^");
         write(connectionFD, writeBuffer, sizeof(writeBuffer));
         read(connectionFD, readBuffer, sizeof(readBuffer));
+        close(file);
         return;
     }
-    
-    struct flock fl1 = {F_WRLCK, SEEK_SET, srcOffset, sizeof(struct LoanDetails), getpid()};
-    int result = fcntl(file, F_SETLK, &fl1);
 
-    if(result != -1)
-    {
-
-        memset(writeBuffer, '\0', sizeof(writeBuffer));
-        strcpy(writeBuffer, "Enter Employee ID: ");
-        write(connectionFD, writeBuffer, sizeof(writeBuffer));
-
-        memset(readBuffer, '\0', sizeof(readBuffer));
-        read(connectionFD, readBuffer, sizeof(readBuffer));
-        eID = atoi(readBuffer);
-
-        ld.empID = eID;
-        ld.status = 1; // Pending
-        printf("Manager assigned employee %d loan application\n", eID);
-        write(file, &ld, sizeof(ld));
-
-        fl1.l_type = F_UNLCK;
-        fl1.l_whence = SEEK_SET;
-        fl1.l_start = srcOffset;
-        fl1.l_len = sizeof(struct LoanDetails);
-        fl1.l_pid = getpid();
-
-        fcntl(file, F_UNLCK, &fl1);
-    }
-    else
-    {
-        memset(writeBuffer, '\0', sizeof(writeBuffer));
-        memset(readBuffer, '\0', sizeof(readBuffer));
-        sprintf(writeBuffer, "Employee already assigned for given %d loan ID^", lID);
-        write(connectionFD, writeBuffer, sizeof(writeBuffer));
-        read(connectionFD, readBuffer, sizeof(readBuffer));
-    }
-    close(file);
+    memset(writeBuffer, '\0', sizeof(writeBuffer));
+    strcpy(writeBuffer, "Enter Loan ID to assign: ");
+    write(connectionFD, writeBuffer, sizeof(writeBuffer));
     
     memset(readBuffer, '\0', sizeof(readBuffer));
-    memset(writeBuffer, '\0', sizeof(writeBuffer));
-    strcpy(writeBuffer, "^");
-    write(connectionFD, writeBuffer, sizeof(writeBuffer));
     read(connectionFD, readBuffer, sizeof(readBuffer));
+    int loanID = atoi(readBuffer);
+
+    int offset = -1;
+    lseek(file, 0, SEEK_SET);
+    while (read(file, &ld, sizeof(ld)) == sizeof(ld)) {
+        if (ld.loanID == loanID) {
+            offset = lseek(file, -sizeof(ld), SEEK_CUR);
+            break;
+        }
+    }
+
+    if (offset == -1) {
+        sprintf(writeBuffer, "Invalid Loan ID.^");
+        write(connectionFD, writeBuffer, sizeof(writeBuffer));
+        read(connectionFD, readBuffer, sizeof(readBuffer));
+        close(file);
+        return;
+    }
+
+    struct flock lock;
+    memset(&lock, 0, sizeof(lock));
+    lock.l_type = F_WRLCK;
+    lock.l_whence = SEEK_SET;
+    lock.l_start = offset;
+    lock.l_len = sizeof(struct LoanDetails);
+    lock.l_pid = getpid();
+
+    if (fcntl(file, F_SETLKW, &lock) == -1) {
+        perror("Lock failed");
+        close(file);
+        return;
+    }
+
+    lseek(file, offset, SEEK_SET);
+    read(file, &ld, sizeof(ld));
+
+    if (ld.empID != -1) {
+        sprintf(writeBuffer, "Loan ID %d is already assigned to Employee %d.^", ld.loanID, ld.empID);
+        write(connectionFD, writeBuffer, sizeof(writeBuffer));
+        read(connectionFD, readBuffer, sizeof(readBuffer));
+    } else {
+        memset(writeBuffer, '\0', sizeof(writeBuffer));
+        strcpy(writeBuffer, "Enter Employee ID to assign: ");
+        write(connectionFD, writeBuffer, sizeof(writeBuffer));
+
+        memset(readBuffer, '\0', sizeof(readBuffer));
+        read(connectionFD, readBuffer, sizeof(readBuffer));
+        int empID = atoi(readBuffer);
+
+        ld.empID = empID;
+        ld.status = 1; // Pending
+
+        lseek(file, offset, SEEK_SET);
+        write(file, &ld, sizeof(ld));
+
+        printf("Assigned Employee %d to Loan %d successfully.\n", empID, ld.loanID);
+        sprintf(writeBuffer, "Loan ID %d assigned to Employee %d successfully.^", ld.loanID, empID);
+        write(connectionFD, writeBuffer, sizeof(writeBuffer));
+        read(connectionFD, readBuffer, sizeof(readBuffer));
+    }
+
+    lock.l_type = F_UNLCK;
+    fcntl(file, F_SETLK, &lock);
+    close(file);
 }
 
 // ==================== Change Password ====================

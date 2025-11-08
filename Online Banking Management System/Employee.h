@@ -268,170 +268,401 @@ void addCustomer(int connectionFD) {
 }
 
 // ================= Approve/Reject Loan =================
+// void approveRejectLoan(int connectionFD, int empID)
+// {
+//     char transactionBuffer[4096];
+//     struct LoanDetails ld;
+    
+//     struct trans_histroy th;
+//     time_t s, val = 1;
+// 	struct tm* current_time;
+// 	s = time(NULL);
+// 	current_time = localtime(&s);
+
+//     int lID;
+//     struct Customer cs;
+
+//     int file = open(LOANPATH, O_CREAT | O_RDWR, 0644);
+//     int fp = open(HISTORYPATH, O_RDWR | O_APPEND);
+//     lseek(file, 0, SEEK_SET);
+
+//     memset(writeBuffer, '\0', sizeof(writeBuffer));
+//     strcpy(writeBuffer, "Enter Loan ID: ");
+//     write(connectionFD, writeBuffer, sizeof(writeBuffer));
+
+//     memset(readBuffer, '\0' , sizeof(readBuffer));
+//     read(connectionFD, readBuffer, sizeof(readBuffer));
+//     lID = atoi(readBuffer);
+
+//     int srcOffset1 = -1, sourceFound1 = 0, srcOffset2 = -1, sourceFound2 = 0;
+//     while (read(file, &ld, sizeof(ld)) != 0)
+//     {
+//         if(ld.loanID == lID)
+//         {
+//             srcOffset1 = lseek(file, -sizeof(struct LoanDetails), SEEK_CUR);
+//             sourceFound1 = 1;
+//         }
+//         if(sourceFound1)
+//             break;
+//     }
+
+//     if(srcOffset1 == -1) {
+//         memset(writeBuffer, 0, sizeof(writeBuffer));
+//         sprintf(writeBuffer, "Loan ID %d not found^", lID);
+//         write(connectionFD, writeBuffer, sizeof(writeBuffer));
+//         read(connectionFD, readBuffer, sizeof(readBuffer));
+//         close(file);
+//         return;
+//     }
+
+//     printf("Found Loan ID %d: empID=%d, status=%d, accountNo=%d\n", ld.loanID, ld.empID, ld.status, ld.accountNumber);
+
+//     struct flock fl1 = {F_WRLCK, SEEK_SET, srcOffset1, sizeof(struct LoanDetails), getpid()};
+//     int result1 = fcntl(file, F_SETLKW, &fl1);
+
+//     int approveFlag = 0, rejectFlag = 0, devactiveFlag = 0;
+
+//     if(result1 != -1)
+//     {
+//         int file2 = open(CUSPATH, O_CREAT | O_RDWR, 0644);
+//         while (read(file2, &cs, sizeof(cs)) != 0)
+//         {
+//             if(cs.accountNumber == ld.accountNumber)
+//             {
+//                 srcOffset2 = lseek(file2, -sizeof(struct Customer), SEEK_CUR);
+//                 sourceFound2 = 1;
+//             }
+//             if(sourceFound2)
+//                 break;
+//         }
+//         struct flock fl2 = {F_WRLCK, SEEK_SET, srcOffset2, sizeof(struct Customer), getpid()};
+//         int result2 = fcntl(file2, F_SETLKW, &fl2);
+
+//         int choice;
+//         memset(writeBuffer, 0, sizeof(writeBuffer));
+//         strcpy(writeBuffer, "Enter 1 to Approve Loan\nEnter 2 to Reject Loan: ");
+//         write(connectionFD, writeBuffer, sizeof(writeBuffer));
+
+//         memset(readBuffer, '\0' , sizeof(readBuffer));
+//         read(connectionFD, readBuffer, sizeof(readBuffer));
+//         choice = atoi(readBuffer);
+
+//         if(choice == 1)
+//         {
+//             if(cs.activeStatus == 0)
+//             {
+//                 ld.status = 3;   // rejected                         
+//                 printf("%d rejected loan for account number: %d reason customer is deactive\n", empID, cs.accountNumber);
+//                 write(file, &ld, sizeof(ld));
+//                 devactiveFlag = 1;
+//             }
+//             else
+//             {
+//                 cs.balance += ld.loanAmount;
+//                 ld.status = 2; // approved
+
+//                 printf("%d approved loan for account number: %d\n", empID, cs.accountNumber);
+
+//                 bzero(transactionBuffer, sizeof(transactionBuffer));
+//                 sprintf(transactionBuffer, "%d credited by loan id %d at %02d:%02d:%02d %d-%d-%d\n", ld.loanAmount, lID, current_time->tm_hour, current_time->tm_min,current_time->tm_sec, (current_time->tm_year)+1900, (current_time->tm_mon)+1, current_time->tm_mday);
+            
+//                 bzero(th.hist, sizeof(th.hist));
+//                 strcpy(th.hist, transactionBuffer);
+//                 th.acc_no = cs.accountNumber;
+//                 write(fp, &th, sizeof(th));
+
+//                 write(file2, &cs, sizeof(cs));
+//                 write(file, &ld, sizeof(ld));
+
+//                 fl2.l_type = F_UNLCK;
+//                 fl2.l_whence = SEEK_SET;
+//                 fl2.l_start = srcOffset2;
+//                 fl2.l_len = sizeof(struct Customer);
+//                 fl2.l_pid = getpid();
+
+//                 fcntl(file2, F_UNLCK, &fl2);
+
+//                 close(file2);
+//                 close(fp);
+//                 approveFlag = 1;
+//             }
+//         }
+//         else if(choice == 2)
+//         {
+
+//             printf("%d rejected loan for account number: %d\n", empID, cs.accountNumber);
+//             ld.status = 3;
+//             write(file, &ld, sizeof(ld));
+//             rejectFlag = 1;
+
+//             fl2.l_type = F_UNLCK;
+//             fl2.l_whence = SEEK_SET;
+//             fl2.l_start = srcOffset2;
+//             fl2.l_len = sizeof(struct Customer);
+//             fl2.l_pid = getpid();
+
+//             fcntl(file2, F_UNLCK, &fl2);
+
+//             close(file2);
+//         }
+//         else
+//         {
+//             printf("Invalid Choice\n");
+//         }
+//     }
+//     else
+//     {
+//         memset(writeBuffer, '\0', sizeof(writeBuffer));
+//         memset(readBuffer, '\0' , sizeof(readBuffer));
+//         sprintf(writeBuffer, "System busy. Try again later for Loan ID %d^", lID);
+//         write(connectionFD, writeBuffer, sizeof(writeBuffer));
+//         read(connectionFD, readBuffer, sizeof(readBuffer)); 
+//     }
+
+//     fl1.l_type = F_UNLCK;
+//     fl1.l_whence = SEEK_SET;
+//     fl1.l_start = srcOffset1;
+//     fl1.l_len = sizeof(struct LoanDetails);
+//     fl1.l_pid = getpid();
+//     fcntl(file, F_UNLCK, &fl1);
+
+//     close(file);
+
+//     memset(readBuffer, '\0' , sizeof(readBuffer));
+//     memset(writeBuffer, 0, sizeof(writeBuffer));
+//     if(approveFlag == 1)
+//     {
+//         strcat(writeBuffer, "Loan Approved\n");
+//     }
+//     else if(rejectFlag == 1)
+//     {
+//         strcat(writeBuffer, "Loan rejected\n");
+//     }
+//     else if(devactiveFlag == 1)
+//     {
+//         strcat(writeBuffer, "Account is already deactivate so can't approve/reject loan\n");
+//     }
+//     strcat(writeBuffer, "^");
+//     write(connectionFD, writeBuffer, sizeof(writeBuffer));
+//     read(connectionFD, readBuffer, sizeof(readBuffer));
+// }
+
 void approveRejectLoan(int connectionFD, int empID)
 {
     char transactionBuffer[4096];
     struct LoanDetails ld;
-    
+    struct Customer cs;
     struct trans_histroy th;
-    time_t s, val = 1;
-	struct tm* current_time;
-	s = time(NULL);
-	current_time = localtime(&s);
+
+    time_t s = time(NULL);
+    struct tm* current_time = localtime(&s);
 
     int lID;
-    struct Customer cs;
+    int approveFlag = 0, rejectFlag = 0, deactiveFlag = 0;
 
-    int file = open(LOANPATH, O_CREAT | O_RDWR, 0644);
-    int fp = open(HISTORYPATH, O_RDWR | O_APPEND);
-    lseek(file, 0, SEEK_SET);
-
-    memset(writeBuffer, '\0', sizeof(writeBuffer));
+    // ---------- Step 1: Ask for Loan ID ----------
+    memset(writeBuffer, 0, sizeof(writeBuffer));
     strcpy(writeBuffer, "Enter Loan ID: ");
     write(connectionFD, writeBuffer, sizeof(writeBuffer));
 
-    memset(readBuffer, '\0' , sizeof(readBuffer));
+    memset(readBuffer, 0, sizeof(readBuffer));
     read(connectionFD, readBuffer, sizeof(readBuffer));
     lID = atoi(readBuffer);
 
-    int srcOffset1 = -1, sourceFound1 = 0, srcOffset2 = -1, sourceFound2 = 0;
-    while (read(file, &ld, sizeof(ld)) != 0)
-    {
-        if(ld.loanID == lID)
-        {
-            srcOffset1 = lseek(file, -sizeof(struct LoanDetails), SEEK_CUR);
-            sourceFound1 = 1;
-        }
-        if(sourceFound1)
-            break;
-    }
-
-    struct flock fl1 = {F_WRLCK, SEEK_SET, srcOffset1, sizeof(struct LoanDetails), getpid()};
-    int result1 = fcntl(file, F_SETLK, &fl1);
-
-    int approveFlag = 0, rejectFlag = 0, devactiveFlag = 0;
-
-    if(result1 != -1)
-    {
-        int file2 = open(CUSPATH, O_CREAT | O_RDWR, 0644);
-        while (read(file2, &cs, sizeof(cs)) != 0)
-        {
-            if(cs.accountNumber == ld.accountNumber)
-            {
-                srcOffset2 = lseek(file2, -sizeof(struct Customer), SEEK_CUR);
-                sourceFound2 = 1;
-            }
-            if(sourceFound2)
-                break;
-        }
-        struct flock fl2 = {F_WRLCK, SEEK_SET, srcOffset2, sizeof(struct Customer), getpid()};
-        int result2 = fcntl(file2, F_SETLKW, &fl2);
-
-        int choice;
-        memset(writeBuffer, 0, sizeof(writeBuffer));
-        strcpy(writeBuffer, "Enter 1 to Approve Loan\nEnter 2 to Reject Loan: ");
+    // ---------- Step 2: Open loan file ----------
+    int file = open(LOANPATH, O_RDWR);
+    if (file == -1) {
+        perror("Error opening loan file");
+        strcpy(writeBuffer, "System Error: Cannot open loan file^");
         write(connectionFD, writeBuffer, sizeof(writeBuffer));
-
-        memset(readBuffer, '\0' , sizeof(readBuffer));
         read(connectionFD, readBuffer, sizeof(readBuffer));
-        choice = atoi(readBuffer);
+        return;
+    }
 
-        if(choice == 1)
-        {
-            if(cs.activeStatus == 0)
-            {
-                ld.status = 3;   // rejected                         
-                printf("%d rejected loan for account number: %d reason customer is deactive\n", empID, cs.accountNumber);
-                write(file, &ld, sizeof(ld));
-                devactiveFlag = 1;
-            }
-            else
-            {
-                cs.balance += ld.loanAmount;
-                ld.status = 2; // approved
-
-                printf("%d approved loan for account number: %d\n", empID, cs.accountNumber);
-
-                bzero(transactionBuffer, sizeof(transactionBuffer));
-                sprintf(transactionBuffer, "%d credited by loan id %d at %02d:%02d:%02d %d-%d-%d\n", ld.loanAmount, lID, current_time->tm_hour, current_time->tm_min,current_time->tm_sec, (current_time->tm_year)+1900, (current_time->tm_mon)+1, current_time->tm_mday);
-            
-                bzero(th.hist, sizeof(th.hist));
-                strcpy(th.hist, transactionBuffer);
-                th.acc_no = cs.accountNumber;
-                write(fp, &th, sizeof(th));
-
-                write(file2, &cs, sizeof(cs));
-                write(file, &ld, sizeof(ld));
-
-                fl2.l_type = F_UNLCK;
-                fl2.l_whence = SEEK_SET;
-                fl2.l_start = srcOffset2;
-                fl2.l_len = sizeof(struct Customer);
-                fl2.l_pid = getpid();
-
-                fcntl(file2, F_UNLCK, &fl2);
-
-                close(file2);
-                close(fp);
-                approveFlag = 1;
-            }
-        }
-        else if(choice == 2)
-        {
-
-            printf("%d rejected loan for account number: %d\n", empID, cs.accountNumber);
-            ld.status = 3;
-            write(file, &ld, sizeof(ld));
-            rejectFlag = 1;
-
-            fl2.l_type = F_UNLCK;
-            fl2.l_whence = SEEK_SET;
-            fl2.l_start = srcOffset2;
-            fl2.l_len = sizeof(struct Customer);
-            fl2.l_pid = getpid();
-
-            fcntl(file2, F_UNLCK, &fl2);
-
-            close(file2);
-        }
-        else
-        {
-            printf("Invalid Choice\n");
+    // ---------- Step 3: Locate loan record ----------
+    int srcOffset1 = -1;
+    lseek(file, 0, SEEK_SET);
+    while (read(file, &ld, sizeof(ld)) == sizeof(ld)) {
+        if (ld.loanID == lID) {
+            srcOffset1 = lseek(file, -sizeof(ld), SEEK_CUR);
+            break;
         }
     }
-    else
-    {
-        memset(writeBuffer, 0, sizeof(writeBuffer));
-        memset(readBuffer, '\0' , sizeof(readBuffer));
-        sprintf(writeBuffer, "Given Loan ID %d is already either approved or rejected^", lID);
+
+    if (srcOffset1 == -1) {
+        // Loan not found
+        strcpy(writeBuffer, "Invalid Loan ID^");
         write(connectionFD, writeBuffer, sizeof(writeBuffer));
-        read(connectionFD, readBuffer, sizeof(readBuffer)); 
+        read(connectionFD, readBuffer, sizeof(readBuffer));
+        close(file);
+        return;
     }
 
-    fl1.l_type = F_UNLCK;
+    // ---------- Step 4: Lock the loan record ----------
+    struct flock fl1;
+    memset(&fl1, 0, sizeof(fl1));
+    fl1.l_type = F_WRLCK;
     fl1.l_whence = SEEK_SET;
     fl1.l_start = srcOffset1;
     fl1.l_len = sizeof(struct LoanDetails);
     fl1.l_pid = getpid();
-    fcntl(file, F_UNLCK, &fl1);
 
-    close(file);
+    if (fcntl(file, F_SETLKW, &fl1) == -1) {
+        perror("fcntl lock error on loan file");
+        sprintf(writeBuffer, "System busy. Try again later for Loan ID %d^", lID);
+        write(connectionFD, writeBuffer, sizeof(writeBuffer));
+        read(connectionFD, readBuffer, sizeof(readBuffer));
+        close(file);
+        return;
+    }
 
-    memset(readBuffer, '\0' , sizeof(readBuffer));
+    // ---------- Step 5: Re-read locked record ----------
+    lseek(file, srcOffset1, SEEK_SET);
+    read(file, &ld, sizeof(ld));
+
+    // If loan is already processed
+    if (ld.status == 2 || ld.status == 3) {
+        sprintf(writeBuffer, "Loan ID %d is already approved or rejected^", lID);
+        write(connectionFD, writeBuffer, sizeof(writeBuffer));
+        read(connectionFD, readBuffer, sizeof(readBuffer));
+
+        // Unlock & exit
+        fl1.l_type = F_UNLCK;
+        fcntl(file, F_SETLK, &fl1);
+        close(file);
+        return;
+    }
+
+    // ---------- Step 6: Lock corresponding customer record ----------
+    int file2 = open(CUSPATH, O_RDWR);
+    if (file2 == -1) {
+        perror("Error opening customer file");
+        strcpy(writeBuffer, "System Error: Cannot open customer file^");
+        write(connectionFD, writeBuffer, sizeof(writeBuffer));
+        read(connectionFD, readBuffer, sizeof(readBuffer));
+        fl1.l_type = F_UNLCK;
+        fcntl(file, F_SETLK, &fl1);
+        close(file);
+        return;
+    }
+
+    int srcOffset2 = -1;
+    lseek(file2, 0, SEEK_SET);
+    while (read(file2, &cs, sizeof(cs)) == sizeof(cs)) {
+        if (cs.accountNumber == ld.accountNumber) {
+            srcOffset2 = lseek(file2, -sizeof(cs), SEEK_CUR);
+            break;
+        }
+    }
+
+    if (srcOffset2 == -1) {
+        strcpy(writeBuffer, "Customer not found for this loan^");
+        write(connectionFD, writeBuffer, sizeof(writeBuffer));
+        read(connectionFD, readBuffer, sizeof(readBuffer));
+        // Unlock loan and close files
+        fl1.l_type = F_UNLCK;
+        fcntl(file, F_SETLK, &fl1);
+        close(file);
+        close(file2);
+        return;
+    }
+
+    struct flock fl2;
+    memset(&fl2, 0, sizeof(fl2));
+    fl2.l_type = F_WRLCK;
+    fl2.l_whence = SEEK_SET;
+    fl2.l_start = srcOffset2;
+    fl2.l_len = sizeof(struct Customer);
+    fl2.l_pid = getpid();
+
+    if (fcntl(file2, F_SETLKW, &fl2) == -1) {
+        perror("fcntl lock error on customer file");
+        sprintf(writeBuffer, "System busy. Try again later for account %d^", cs.accountNumber);
+        write(connectionFD, writeBuffer, sizeof(writeBuffer));
+        read(connectionFD, readBuffer, sizeof(readBuffer));
+        // Unlock loan
+        fl1.l_type = F_UNLCK;
+        fcntl(file, F_SETLK, &fl1);
+        close(file);
+        close(file2);
+        return;
+    }
+
+    // ---------- Step 7: Ask user (employee) to approve or reject ----------
     memset(writeBuffer, 0, sizeof(writeBuffer));
-    if(approveFlag == 1)
-    {
-        strcat(writeBuffer, "Loan Approved\n");
+    strcpy(writeBuffer, "Enter 1 to Approve Loan\nEnter 2 to Reject Loan: ");
+    write(connectionFD, writeBuffer, sizeof(writeBuffer));
+    memset(readBuffer, 0, sizeof(readBuffer));
+    read(connectionFD, readBuffer, sizeof(readBuffer));
+    int choice = atoi(readBuffer);
+
+    int fp = open(HISTORYPATH, O_RDWR | O_APPEND | O_CREAT, 0644);
+
+    // ---------- Step 8: Process choice ----------
+    if (choice == 1) {
+        if (cs.activeStatus == 0) {
+            ld.status = 3; // rejected
+            deactiveFlag = 1;
+            printf("%d rejected loan %d (inactive customer)\n", empID, ld.loanID);
+        } else {
+            cs.balance += ld.loanAmount;
+            ld.status = 2; // approved
+            printf("%d approved loan ID %d for account %d\n", empID, ld.loanID, cs.accountNumber);
+
+            // Write transaction history
+            bzero(transactionBuffer, sizeof(transactionBuffer));
+            sprintf(transactionBuffer,
+                    "%d credited by loan id %d at %02d:%02d:%02d %d-%d-%d\n",
+                    ld.loanAmount, lID,
+                    current_time->tm_hour, current_time->tm_min, current_time->tm_sec,
+                    (current_time->tm_year) + 1900, (current_time->tm_mon) + 1, current_time->tm_mday);
+
+            bzero(th.hist, sizeof(th.hist));
+            strcpy(th.hist, transactionBuffer);
+            th.acc_no = cs.accountNumber;
+            write(fp, &th, sizeof(th));
+
+            approveFlag = 1;
+        }
+    } else if (choice == 2) {
+        ld.status = 3; // rejected
+        rejectFlag = 1;
+        printf("%d rejected loan ID %d\n", empID, ld.loanID);
+    } else {
+        printf("Invalid choice entered for loan approval menu\n");
     }
-    else if(rejectFlag == 1)
-    {
-        strcat(writeBuffer, "Loan rejected\n");
+
+    // ---------- Step 9: Update records ----------
+    if (approveFlag || rejectFlag || deactiveFlag) {
+        lseek(file, srcOffset1, SEEK_SET);
+        write(file, &ld, sizeof(ld));
+
+        lseek(file2, srcOffset2, SEEK_SET);
+        write(file2, &cs, sizeof(cs));
     }
-    else if(devactiveFlag == 1)
-    {
-        strcat(writeBuffer, "Account is already deactivate so can't approve/reject loan\n");
-    }
-    strcat(writeBuffer, "^");
+
+    // ---------- Step 10: Unlock both ----------
+    fl2.l_type = F_UNLCK;
+    fcntl(file2, F_SETLK, &fl2);
+    fl1.l_type = F_UNLCK;
+    fcntl(file, F_SETLK, &fl1);
+
+    // ---------- Step 11: Close files ----------
+    close(fp);
+    close(file);
+    close(file2);
+
+    // ---------- Step 12: Inform client ----------
+    memset(writeBuffer, 0, sizeof(writeBuffer));
+    if (approveFlag)
+        strcpy(writeBuffer, "Loan Approved\n^");
+    else if (rejectFlag)
+        strcpy(writeBuffer, "Loan Rejected\n^");
+    else if (deactiveFlag)
+        strcpy(writeBuffer, "Account is deactivated, loan rejected automatically\n^");
+    else
+        strcpy(writeBuffer, "No action taken\n^");
+
     write(connectionFD, writeBuffer, sizeof(writeBuffer));
     read(connectionFD, readBuffer, sizeof(readBuffer));
 }
