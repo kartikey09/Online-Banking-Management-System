@@ -544,7 +544,9 @@ void transferFunds(int connectionFD, int sourceAccount, int destAccount, float a
         write(connectionFD, writeBuffer, sizeof(writeBuffer));
         read(connectionFD, readBuffer, sizeof(readBuffer));
         return;        
-    }
+    } 
+    
+
 
     struct Customer cs;
     struct trans_histroy th;
@@ -566,12 +568,30 @@ void transferFunds(int connectionFD, int sourceAccount, int destAccount, float a
     {
         if(cs.accountNumber == sourceAccount)
         {
+            if(cs.activeStatus == 0){
+                bzero(writeBuffer, sizeof(writeBuffer));
+                bzero(readBuffer, sizeof(readBuffer));
+                printf("Cant transfer funds from a deactivated acc.\n");
+                strcpy(writeBuffer, "Cant transfer funds from a deactivated acc.^");
+                write(connectionFD, writeBuffer, sizeof(writeBuffer));
+                read(connectionFD, readBuffer, sizeof(readBuffer));
+                return;
+            }
             srcOffset = lseek(file, -sizeof(struct Customer), SEEK_CUR);
             read(file, &cs, sizeof(cs));
             sourceFound = 1;
         }
         if(cs.accountNumber == destAccount)
         {
+            if(cs.activeStatus == 0){
+                bzero(writeBuffer, sizeof(writeBuffer));
+                bzero(readBuffer, sizeof(readBuffer));
+                printf("Cant transfer funds to a deactivated acc.\n");
+                strcpy(writeBuffer, "Cant transfer funds to a deactivated acc.^");
+                write(connectionFD, writeBuffer, sizeof(writeBuffer));
+                read(connectionFD, readBuffer, sizeof(readBuffer));
+                return;
+            }
             dstOffset = lseek(file, -sizeof(struct Customer), SEEK_CUR);
             read(file, &cs, sizeof(cs));
             destFound = 1;
